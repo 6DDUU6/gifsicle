@@ -314,6 +314,9 @@ int             parse_two_colors(Clp_Parser*, const char*, int, void*);
 extern Gif_Stream *input;
 extern const char *input_name;
 
+/* Initialize the command-processing defaults for embedding callers. */
+void            gifsicle_initialize_api(void);
+
 void            input_stream(const char*);
 void            input_done(void);
 void            output_frames(void);

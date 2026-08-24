@@ -359,7 +359,7 @@ Clp_Parser* clp;
 
 
 static void combine_output_options(void);
-static void initialize_def_frame(void);
+void gifsicle_initialize_api(void);
 static void redundant_option_warning(const char *);
 
 #if 0
@@ -1217,8 +1217,8 @@ handle_extension(Clp_Parser *clp, int is_app)
  * option processing
  **/
 
-static void
-initialize_def_frame(void)
+void
+gifsicle_initialize_api(void)
 {
   /* frame defaults */
   def_frame.stream = 0;
@@ -1525,7 +1525,7 @@ main(int argc, char *argv[])
   program_name = Clp_ProgramName(clp);
 
   frames = new_frameset(16);
-  initialize_def_frame();
+  gifsicle_initialize_api();
   Gif_InitCompressInfo(&gif_write_info);
   Gif_SetErrorHandler(gifread_error);
 

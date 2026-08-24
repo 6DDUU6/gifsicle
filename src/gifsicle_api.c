@@ -42,23 +42,71 @@ static int process_stream(Gif_Stream *gfs, int optimize, int lossy,
                            const char *resize, const char *gamma,
                            const char *output_path, void **out_ptr,
                            size_t *out_len) {
-  Gif_CompressInfo ci; int w = 0, h = 0, ok; FILE *f;
+  Gif_CompressInfo ci;
+  Gt_OutputData output_data;
+  Gt_Frameset *frameset;
+  Gif_Stream *out;
+  int w = 0, h = 0, ok, i, huge_stream, compress_immediately;
+  FILE *f;
   if (!gfs || gfs->nimages <= 0) return -1;
   if (!parse_resize(resize, &w, &h)) return -2;
-  if (!set_gamma(gamma)) return -5;
+
+  gifsicle_initialize_api();
+  Gif_InitCompressInfo(&ci);
+  ci.loss = lossy > 0 ? lossy : 0;
+  gif_write_info = ci;
+
+  output_data = active_output_data;
+  output_data.optimizing = optimize > 0 ? optimize : 0;
+  if (resize && *resize) {
+    output_data.scaling = GT_SCALING_RESIZE;
+    output_data.resize_width = w;
+    output_data.resize_height = h;
+  }
+
+  frameset = new_frameset(gfs->nimages);
+  if (!frameset) return -3;
+  /* Keep one caller-owned stream reference while merge_frame_interval
+     consumes the references installed by add_frame(). */
+  gfs->refcount++;
+  for (i = 0; i < gfs->nimages; ++i)
+    add_frame(frameset, gfs, gfs->images[i]);
+  compress_immediately = (output_data.scaling != GT_SCALING_NONE
+                          || (output_data.optimizing & GT_OPT_MASK)) ? 0 : 1;
+  out = merge_frame_interval(frameset, 0, -1, &output_data,
+                             compress_immediately, &huge_stream);
+  blank_frameset(frameset, 0, 0, 1);
+  if (!out) return -3;
+
+  if (!set_gamma(gamma)) {
+    Gif_DeleteStream(out);
+    return -5;
+  }
   thread_count = 1;
-  if (resize && *resize) resize_stream(gfs, (double)w, (double)h, 0, SCALE_METHOD_MIX, 0);
-  if (optimize > 0) optimize_fragments(gfs, optimize, 0);
-  Gif_InitCompressInfo(&ci); ci.loss = lossy > 0 ? lossy : 0;
+  if (resize && *resize)
+    resize_stream(out, (double)w, (double)h, 0, SCALE_METHOD_MIX, 0);
+  if (optimize > 0)
+    optimize_fragments(out, optimize, huge_stream);
   if (out_ptr && out_len) {
     uint8_t *data = NULL; uint32_t len = 0;
-    ok = Gif_WriteMemory(gfs, &ci, &data, &len);
+    ok = Gif_WriteMemory(out, &ci, &data, &len);
+    Gif_DeleteStream(out);
     if (!ok) return -3;
     *out_ptr = data; *out_len = (size_t)len; return 0;
   }
-  if (!output_path || !*output_path) return -4;
-  f = fopen(output_path, "wb"); if (!f) return -4;
-  ok = Gif_FullWriteFile(gfs, &ci, f); fclose(f); return ok ? 0 : -3;
+  if (!output_path || !*output_path) {
+    Gif_DeleteStream(out);
+    return -4;
+  }
+  f = fopen(output_path, "wb");
+  if (!f) {
+    Gif_DeleteStream(out);
+    return -4;
+  }
+  ok = Gif_FullWriteFile(out, &ci, f);
+  fclose(f);
+  Gif_DeleteStream(out);
+  return ok ? 0 : -3;
 }
 
 GIFSICLE_API int gifsicle_process_memory(const void *input_ptr, size_t input_len,
