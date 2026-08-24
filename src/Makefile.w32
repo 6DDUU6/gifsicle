@@ -19,14 +19,18 @@ GIFWRITE_OBJ = gifwrite.obj
 #GIFWRITE_OBJ = ungifwrt.obj
 
 CC = cl
-CFLAGS = -I.. -I..\include -DHAVE_CONFIG_H -D_CONSOLE /W2 /O2
+CFLAGS = -I.. -I..\include -DHAVE_CONFIG_H -D_CONSOLE /W2 /O2 /MT
 LDLIBS = setargv.obj
 
 GIFSICLE_OBJS = clp.obj fmalloc.obj giffunc.obj gifread.obj gifunopt.obj \
 	$(GIFWRITE_OBJ) merge.obj optimize.obj quantize.obj support.obj \
-	xform.obj gifsicle.obj
+	xform.obj gifsicle.obj kcolor.obj
 
-GIFDIFF_OBJS = clp.obj fmalloc.obj giffunc.obj gifread.obj gifdiff.obj
+GIFSICLE_DLL_OBJS = clp.obj fmalloc.obj giffunc.obj gifread.obj gifunopt.obj \
+	$(GIFWRITE_OBJ) merge.obj optimize.obj quantize.obj support.obj \
+	xform.obj kcolor.obj gifsicle_dll.obj gifsicle_api.obj
+
+GIFDIFF_OBJS = clp.obj fmalloc.obj giffunc.obj gifread.obj gifdiff.obj kcolor.obj
 
 .c.obj:
 	$(CC) $(CFLAGS) /c $<
@@ -36,6 +40,9 @@ gifsicle.exe: $(GIFSICLE_OBJS)
 
 gifdiff.exe: $(GIFDIFF_OBJS)
 	$(CC) $(CFLAGS) /Fegifdiff.exe $(GIFDIFF_OBJS) /link $(LDLIBS)
+
+gifsicle.dll: $(GIFSICLE_DLL_OBJS)
+	$(CC) $(CFLAGS) /LD /Fegifsicle.dll $(GIFSICLE_DLL_OBJS)
 
 clp.obj: ..\config.h ..\include\lcdf\clp.h clp.c
 
@@ -53,6 +60,10 @@ quantize.obj: ..\config.h gifsicle.h quantize.c
 support.obj: ..\config.h gifsicle.h support.c
 xform.obj: ..\config.h gifsicle.h xform.c
 gifsicle.obj: ..\config.h gifsicle.h gifsicle.c
+gifsicle_dll.obj: ..\config.h gifsicle.h gifsicle.c
+	$(CC) $(CFLAGS) /DGIFSICLE_NO_MAIN /c gifsicle.c /Fogifsicle_dll.obj
+gifsicle_api.obj: ..\config.h gifsicle.h ..\include\gifsicle_api.h gifsicle_api.c
+	$(CC) $(CFLAGS) /DGIFSICLE_BUILD_DLL /c gifsicle_api.c
 
 ..\config.h: win32cfg.h
 	copy win32cfg.h ..\config.h
@@ -60,3 +71,6 @@ gifsicle.obj: ..\config.h gifsicle.h gifsicle.c
 clean:
 	del *.obj
 	del *.exe
+	del *.dll
+	del *.lib
+	del *.exp

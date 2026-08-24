@@ -1,0 +1,46 @@
+name: Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master, github ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    name: Windows ${{ matrix.arch }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86, x64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build EXE and DLL
+        shell: pwsh
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw 'Visual C++ installation not found' }
+          $devcmd = Join-Path $vs 'Common7\Tools\VsDevCmd.bat'
+          cmd /s /c "`"$devcmd`" -arch=$env:ARCH && cd src && nmake -f Makefile.w32 gifsicle.exe gifsicle.dll"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item src\gifsicle.exe, src\gifsicle.dll, src\gifsicle.lib dist\
+          Copy-Item include\gifsicle_api.h dist\
+
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          .\dist\gifsicle.exe --version
+          if (-not (Test-Path .\dist\gifsicle.dll)) { throw 'DLL was not produced' }
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gifsicle-windows-${{ matrix.arch }}
+          path: dist

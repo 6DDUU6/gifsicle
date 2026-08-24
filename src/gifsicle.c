@@ -1458,7 +1458,11 @@ error:
  **/
 
 int
+#ifdef GIFSICLE_NO_MAIN
+gifsicle_cli_main(int argc, char *argv[])
+#else
 main(int argc, char *argv[])
+#endif
 {
   /* Check SIZEOF constants (useful for Windows). If these assertions fail,
      you've used the wrong Makefile. You should've used Makefile.w32 for
