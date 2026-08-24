@@ -80,6 +80,12 @@ file and memory APIs declared in `include/gifsicle_api.h`. Their `gamma`
 argument accepts `NULL`/`"srgb"`, `"1"`, another positive numeric value, or
 `"oklab"`. Release memory output with `gifsicle_free`.
 
+`gifsicle_get_frame_info(input_path)` returns a DLL-allocated string in the
+form `frame_count-average_interval_ms`, such as `"120-50"`. The interval is
+the average GIF frame delay converted from hundredths of a second to
+milliseconds. Read failures return `"-"`; release the returned string with
+`gifsicle_free`.
+
 Contact
 -------
 

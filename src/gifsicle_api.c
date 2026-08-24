@@ -134,4 +134,40 @@ GIFSICLE_API int gifsicle_process_file(const char *input_path, int optimize,
   Gif_DeleteStream(gfs); return result;
 }
 
+GIFSICLE_API char *gifsicle_get_frame_info(const char *input_path) {
+  FILE *f;
+  Gif_Stream *gfs;
+  char *info;
+  unsigned long long total_delay = 0;
+  unsigned long long average_ms;
+  int i;
+
+  info = Gif_NewArray(char, 64);
+  if (!info)
+    return NULL;
+  if (!input_path || !*input_path) {
+    snprintf(info, 64, "-");
+    return info;
+  }
+  f = fopen(input_path, "rb");
+  if (!f) {
+    snprintf(info, 64, "-");
+    return info;
+  }
+  gfs = Gif_FullReadFile(f, GIF_READ_COMPRESSED, input_path, 0);
+  fclose(f);
+  if (!gfs || gfs->nimages <= 0) {
+    Gif_DeleteStream(gfs);
+    snprintf(info, 64, "-");
+    return info;
+  }
+  for (i = 0; i < gfs->nimages; ++i)
+    total_delay += gfs->images[i]->delay;
+  average_ms = (total_delay * 10 + (unsigned long long) gfs->nimages / 2)
+               / (unsigned long long) gfs->nimages;
+  snprintf(info, 64, "%d-%llu", gfs->nimages, average_ms);
+  Gif_DeleteStream(gfs);
+  return info;
+}
+
 GIFSICLE_API void gifsicle_free(void *ptr) { Gif_Free(ptr); }
