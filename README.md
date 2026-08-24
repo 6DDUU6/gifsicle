@@ -78,7 +78,11 @@ The `windows.yml` workflow builds x86 and x64 `gifsicle.exe` and
 `gifsicle.dll` artifacts with the static MSVC runtime (`/MT`). The DLL exports
 file and memory APIs declared in `include/gifsicle_api.h`. Their `gamma`
 argument accepts `NULL`/`"srgb"`, `"1"`, another positive numeric value, or
-`"oklab"`. Release memory output with `gifsicle_free`.
+`"oklab"`.
+Their `colors` argument accepts `0` to preserve the normal no-`--colors`
+workflow, or a value from 2 through 256 to apply the corresponding adaptive
+palette reduction before optimization.
+Release memory output with `gifsicle_free`.
 
 `gifsicle_get_frame_info(input_path)` returns a DLL-owned string in the form
 `frame_count-average_interval_ms`, such as `"120-50"`. The interval is the

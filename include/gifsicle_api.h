@@ -21,12 +21,14 @@ extern "C" {
 
 /* gamma: NULL/"srgb", "1", another numeric value, or "oklab". */
 GIFSICLE_API int gifsicle_process_file(const char *input_path, int optimize,
-                                       int lossy, const char *resize,
+                                       int lossy, int colors,
+                                       const char *resize,
                                        const char *gamma,
                                        const char *output_path);
 GIFSICLE_API int gifsicle_process_memory(const void *input_ptr,
                                          size_t input_len, int optimize,
-                                         int lossy, const char *resize,
+                                         int lossy, int colors,
+                                         const char *resize,
                                          const char *gamma, void **out_ptr,
                                          size_t *out_len);
 /* Returns a DLL-owned string in the form "frame_count-average_ms".
