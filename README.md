@@ -72,6 +72,16 @@ You can edit it with any text editor (like Notepad). See the file for
 more information.
 
 
+Building Windows artifacts with GitHub Actions
+----------------------------------------------
+
+The `windows.yml` workflow builds x86 and x64 `gifsicle.exe` and
+`gifsicle.dll` artifacts with the static MSVC runtime (`/MT`). The DLL exports
+file and memory APIs declared in `include/gifsicle_api.h`. Their `gamma`
+argument accepts `NULL`/`"srgb"`, `"1"`, or another positive numeric value.
+Gifsicle 1.95 keeps its legacy `--lossy` color-difference behavior. Release
+memory output with `gifsicle_free`.
+
 Contact
 -------
 
