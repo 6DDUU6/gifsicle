@@ -11,6 +11,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_MSC_VER)
+# define GIFSICLE_THREAD_LOCAL __declspec(thread)
+#elif defined(__GNUC__) || defined(__clang__)
+# define GIFSICLE_THREAD_LOCAL __thread
+#else
+# define GIFSICLE_THREAD_LOCAL
+#endif
+
 static int parse_resize(const char *s, int *w, int *h) {
   char *end; long x, y;
   if (!s || !*s) return 1;
@@ -134,17 +142,14 @@ GIFSICLE_API int gifsicle_process_file(const char *input_path, int optimize,
   Gif_DeleteStream(gfs); return result;
 }
 
-GIFSICLE_API char *gifsicle_get_frame_info(const char *input_path) {
+GIFSICLE_API const char *gifsicle_get_frame_info(const char *input_path) {
   FILE *f;
   Gif_Stream *gfs;
-  char *info;
+  static GIFSICLE_THREAD_LOCAL char info[64];
   unsigned long long total_delay = 0;
   unsigned long long average_ms;
   int i;
 
-  info = Gif_NewArray(char, 64);
-  if (!info)
-    return NULL;
   if (!input_path || !*input_path) {
     snprintf(info, 64, "-");
     return info;
