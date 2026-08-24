@@ -79,6 +79,9 @@ The `windows.yml` workflow builds x86 and x64 `gifsicle.exe` and
 `gifsicle.dll` artifacts with the static MSVC runtime (`/MT`). The DLL exports
 file and memory APIs declared in `include/gifsicle_api.h`. Their `gamma`
 argument accepts `NULL`/`"srgb"`, `"1"`, or another positive numeric value.
+Their `colors` argument accepts `0` to preserve the normal no-`--colors`
+workflow, or a value from 2 through 256 to apply the corresponding adaptive
+palette reduction before optimization.
 Gifsicle 1.95 keeps its legacy `--lossy` color-difference behavior. Release
 memory output with `gifsicle_free`.
 

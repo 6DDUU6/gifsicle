@@ -6,6 +6,7 @@
 # include <config.h>
 #endif
 #include "gifsicle.h"
+#include "kcolor.h"
 #include <gifsicle_api.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,8 +45,29 @@ static int set_gamma(const char *s) {
   return 1;
 }
 
+static void apply_colors(Gif_Stream *gfs, Gt_OutputData *output_data) {
+  kchist kch;
+  Gif_Colormap *new_cm;
+  uint32_t ntransp;
+  int i, any_locals = 0;
+
+  for (i = 0; i < gfs->nimages; ++i)
+    if (gfs->images[i]->local)
+      any_locals = 1;
+  kchist_make(&kch, gfs, &ntransp);
+  if (kch.n <= output_data->colormap_size && !any_locals) {
+    kchist_cleanup(&kch);
+    return;
+  }
+  output_data->colormap_needs_transparency = ntransp > 0;
+  new_cm = colormap_flat_diversity(&kch, output_data);
+  colormap_stream(gfs, new_cm, output_data);
+  Gif_DeleteColormap(new_cm);
+  kchist_cleanup(&kch);
+}
+
 static int process_stream(Gif_Stream *gfs, int optimize, int lossy,
-                           const char *resize, const char *gamma,
+                           int colors, const char *resize, const char *gamma,
                            const char *output_path, void **out_ptr,
                            size_t *out_len) {
   Gif_CompressInfo ci;
@@ -56,6 +78,7 @@ static int process_stream(Gif_Stream *gfs, int optimize, int lossy,
   FILE *f;
   if (!gfs || gfs->nimages <= 0) return -1;
   if (!parse_resize(resize, &w, &h)) return -2;
+  if (colors != 0 && (colors < 2 || colors > 256)) return -6;
 
   gifsicle_initialize_api();
   Gif_InitCompressInfo(&ci);
@@ -64,6 +87,7 @@ static int process_stream(Gif_Stream *gfs, int optimize, int lossy,
 
   output_data = active_output_data;
   output_data.optimizing = optimize > 0 ? optimize : 0;
+  output_data.colormap_size = colors;
   if (resize && *resize) {
     output_data.scaling = GT_SCALING_RESIZE;
     output_data.resize_width = w;
@@ -78,7 +102,8 @@ static int process_stream(Gif_Stream *gfs, int optimize, int lossy,
   for (i = 0; i < gfs->nimages; ++i)
     add_frame(frameset, gfs, gfs->images[i]);
   compress_immediately = (output_data.scaling != GT_SCALING_NONE
-                          || (output_data.optimizing & GT_OPT_MASK)) ? 0 : 1;
+                          || (output_data.optimizing & GT_OPT_MASK)
+                          || output_data.colormap_size > 0) ? 0 : 1;
   out = merge_frame_interval(frameset, 0, -1, &output_data,
                              compress_immediately, &huge_stream);
   blank_frameset(frameset, 0, 0, 1);
@@ -91,6 +116,8 @@ static int process_stream(Gif_Stream *gfs, int optimize, int lossy,
   thread_count = 1;
   if (resize && *resize)
     resize_stream(out, (double)w, (double)h, 0, SCALE_METHOD_MIX, 0);
+  if (colors > 0)
+    apply_colors(out, &output_data);
   if (optimize > 0)
     optimize_fragments(out, optimize, huge_stream);
   if (out_ptr && out_len) {
@@ -116,7 +143,7 @@ static int process_stream(Gif_Stream *gfs, int optimize, int lossy,
 }
 
 GIFSICLE_API int gifsicle_process_memory(const void *input_ptr, size_t input_len,
-                                         int optimize, int lossy,
+                                         int optimize, int lossy, int colors,
                                          const char *resize, const char *gamma,
                                          void **out_ptr, size_t *out_len) {
   Gif_Record record; Gif_Stream *gfs; int result;
@@ -124,19 +151,22 @@ GIFSICLE_API int gifsicle_process_memory(const void *input_ptr, size_t input_len
   *out_ptr = NULL; *out_len = 0;
   record.data = (const unsigned char *)input_ptr; record.length = (uint32_t)input_len;
   gfs = Gif_FullReadRecord(&record, GIF_READ_UNCOMPRESSED, "<memory>", 0); if (!gfs) return -1;
-  result = process_stream(gfs, optimize, lossy, resize, gamma, NULL, out_ptr, out_len);
+  result = process_stream(gfs, optimize, lossy, colors, resize, gamma, NULL,
+                          out_ptr, out_len);
   Gif_DeleteStream(gfs); return result;
 }
 
 GIFSICLE_API int gifsicle_process_file(const char *input_path, int optimize,
-                                       int lossy, const char *resize,
+                                       int lossy, int colors,
+                                       const char *resize,
                                        const char *gamma,
                                        const char *output_path) {
   FILE *f; Gif_Stream *gfs; int result;
   if (!input_path || !*input_path || !output_path || !*output_path) return -1;
   f = fopen(input_path, "rb"); if (!f) return -1;
   gfs = Gif_FullReadFile(f, GIF_READ_UNCOMPRESSED, input_path, 0); fclose(f); if (!gfs) return -1;
-  result = process_stream(gfs, optimize, lossy, resize, gamma, output_path, NULL, NULL);
+  result = process_stream(gfs, optimize, lossy, colors, resize, gamma,
+                          output_path, NULL, NULL);
   Gif_DeleteStream(gfs); return result;
 }
 
