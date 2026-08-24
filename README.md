@@ -82,11 +82,11 @@ argument accepts `NULL`/`"srgb"`, `"1"`, or another positive numeric value.
 Gifsicle 1.95 keeps its legacy `--lossy` color-difference behavior. Release
 memory output with `gifsicle_free`.
 
-`gifsicle_get_frame_info(input_path)` returns a DLL-allocated string in the
-form `frame_count-average_interval_ms`, such as `"120-50"`. The interval is
-the average GIF frame delay converted from hundredths of a second to
-milliseconds. Read failures return `"-"`; release the returned string with
-`gifsicle_free`.
+`gifsicle_get_frame_info(input_path)` returns a DLL-owned string in the form
+`frame_count-average_interval_ms`, such as `"120-50"`. The interval is the
+average GIF frame delay converted from hundredths of a second to milliseconds.
+Read failures return `"-"`. Do not free or modify this string; copy it before
+the next call to this function on the same thread if it must be retained.
 
 Contact
 -------

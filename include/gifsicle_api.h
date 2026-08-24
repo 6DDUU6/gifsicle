@@ -31,10 +31,10 @@ GIFSICLE_API int gifsicle_process_memory(const void *input_ptr,
                                          int lossy, const char *resize,
                                          const char *gamma, void **out_ptr,
                                          size_t *out_len);
-/* Returns a newly allocated string in the form "frame_count-average_ms".
- * The caller must release the returned string with gifsicle_free(). On any
- * read or allocation failure, the returned string is "-". */
-GIFSICLE_API char *gifsicle_get_frame_info(const char *input_path);
+/* Returns a DLL-owned string in the form "frame_count-average_ms".
+ * The caller must not free or modify it. The pointer remains valid until the
+ * next call to this function on the same thread. Read failures return "-". */
+GIFSICLE_API const char *gifsicle_get_frame_info(const char *input_path);
 GIFSICLE_API void gifsicle_free(void *ptr);
 
 #ifdef __cplusplus
